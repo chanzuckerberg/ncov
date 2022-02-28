@@ -125,9 +125,9 @@ def main():
     offset_by_clade = {}
     for clade in all_clades:
         ind = result.Nextstrain_clade==clade
-        if ind.sum()>100:
+        if ind.sum()>4:
             deviation = div_array[ind] - (t[ind] - reference_day)*rate_per_day
-            offset_by_clade[clade] = np.mean(deviation[~np.isnan(deviation)])
+            offset_by_clade[clade] = np.median(deviation[~np.isnan(deviation)])
 
     # extract divergence, time and offset information into vectors or series
     offset = result["Nextstrain_clade"].apply(lambda x: offset_by_clade.get(x, 2.0))
