@@ -160,9 +160,9 @@ def get_priority_argument(wildcards):
         return ""
 
     if subsampling_settings["priorities"]["type"] == "proximity":
-        return "--priority " + get_priorities(wildcards)
+        return "--priority " + shquote(get_priorities(wildcards))
     elif subsampling_settings["priorities"]["type"] == "file" and "file" in subsampling_settings["priorities"]:
-        return "--priority " + subsampling_settings["priorities"]["file"]
+        return "--priority " + shquote(subsampling_settings["priorities"]["file"])
     else:
         return ""
 
@@ -199,7 +199,7 @@ def _get_specific_subsampling_setting(setting, optional=False):
             elif setting == 'max_sequences':
                 value = f"--subsample-max-sequences {value}"
 
-            return value
+            return shquotewords(value)
         else:
             value = ""
 
@@ -207,7 +207,7 @@ def _get_specific_subsampling_setting(setting, optional=False):
         if re.search(r'\{.+\}', value):
             raise Exception(f"The parameters for the subsampling scheme '{wildcards.subsample}' of build '{wildcards.build_name}' reference build attributes that are not defined in the configuration file: '{value}'. Add these build attributes to the appropriate configuration file and try again.")
 
-        return value
+        return shquotewords(value)
 
     return _get_setting
 
@@ -252,9 +252,15 @@ rule index_sequences:
     benchmark:
         "benchmarks/index_sequences.txt"
     conda: config["conda_environment"]
+    params:
+        strain_prefixes=config["strip_strain_prefixes"],
+        sanitize_log="logs/sanitize_sequences_before_index.txt",
     shell:
         """
-        unxz --stdout {input.sequences} \
+        python3 scripts/sanitize_sequences.py \
+            --sequences {input.sequences} \
+            --strip-prefixes {params.strain_prefixes:q} \
+            --output /dev/stdout 2> {params.sanitize_log} \
             | seqtk comp -u - \
             | sed '1i strain\tlength\tA\tC\tG\tT\tmix2\tmix3\tN\tCpG\ttransversion\ttransition\tCpG_ts' \
             | xz -c -2 > {output.sequence_index} 2>&1 | tee {log}
@@ -479,7 +485,9 @@ rule build_align:
     params:
         outdir = "results/{build_name}/translations",
         genes = ','.join(config.get('genes', ['S'])),
-        basename = "aligned"
+        basename = "aligned",
+        strain_prefixes=config["strip_strain_prefixes"],
+        sanitize_log="logs/sanitize_sequences_before_nextclade_{build_name}.txt",
     log:
         "logs/align_{build_name}.txt"
     benchmark:
@@ -490,7 +498,11 @@ rule build_align:
         mem_mb=3000
     shell:
         """
-        xz -c -d {input.sequences} |  nextclade run \
+        python3 scripts/sanitize_sequences.py \
+            --sequences {input.sequences} \
+            --strip-prefixes {params.strain_prefixes:q} \
+            --output /dev/stdout 2> {params.sanitize_log} \
+            | nextclade run \
             --jobs {threads} \
             --input-fasta /dev/stdin \
             --reference {input.reference} \
@@ -1352,14 +1364,22 @@ rule build_description:
         description = "results/{build_name}/description.md"
     log:
         "logs/build_description_{build_name}.txt"
-    conda: config["conda_environment"]
-    shell:
-        """
-        env BUILD={wildcards.build_name:q} \
-            perl -pe 's/\$\{{BUILD\}}/$ENV{{BUILD}}/g' \
-                < {input.description:q} \
-                > {output.description:q}
-        """
+    run:
+        from string import Template
+
+        context = {
+            "BUILD": wildcards.build_name,
+            **{
+                f"BUILD_PART_{idx}": part
+                    for idx, part
+                     in enumerate(wildcards.build_name.split("_"))},
+        }
+
+        with open(input.description, "r", encoding = "utf-8") as i:
+            template = Template(i.read())
+
+        with open(output.description, "w", encoding = "utf-8") as o:
+            o.write(template.safe_substitute(context))
 
 rule export:
     message: "Exporting data files for Auspice"
