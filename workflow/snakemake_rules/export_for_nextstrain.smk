@@ -188,7 +188,7 @@ rule auspice_config:
                 },
                 {
                     "key": "pango_lineage",
-                    "title": "Pango Lineage",
+                    "title": "GISAID Pango Lineage",
                     "type": "categorical"
                 },
                 {
@@ -201,6 +201,11 @@ rule auspice_config:
                     "key": "S1_mutations",
                     "title": "S1 Mutations",
                     "type": "continuous"
+                },
+                {
+                    "key": "rbd_level",
+                    "title": "RBD Level",
+                    "type": "ordinal"
                 },
                 {
                     "key": "logistic_growth",
@@ -288,6 +293,7 @@ rule auspice_config:
                 "pango_lineage",
                 "Nextclade_pango",
                 "region",
+                "level",
                 "country",
                 "division",
                 location_filter,
