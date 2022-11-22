@@ -1,4 +1,3 @@
-from augur.utils import AugurException
 from augur.filter import run as augur_filter, register_arguments as register_filter_arguments
 from augur.index import index_sequences
 from augur.io import write_sequences, open_file, read_sequences, read_metadata
@@ -51,7 +50,7 @@ def parse_scheme(filename):
             data = yaml.safe_load(fh)
         except yaml.YAMLError as exc:
             print(exc)
-            raise AugurException(f"Error parsing subsampling scheme {filename}")
+            raise Exception(f"Error parsing subsampling scheme {filename}")
     validate_scheme(data)
     return data
 
@@ -63,18 +62,18 @@ def validate_scheme(scheme):
         with open(path.join(path.dirname(path.realpath(__file__)), "subsample_schema.yaml")) as fh:
             schema = yaml.safe_load(fh)
     except yaml.YAMLError as err:
-        raise AugurException("Subsampling schema definition is not valid YAML. Error: {}".format(err))
+        raise Exception("Subsampling schema definition is not valid YAML. Error: {}".format(err))
     # check loaded schema is itself valid -- see http://python-jsonschema.readthedocs.io/en/latest/errors/
     try:
         jsonschema.Draft6Validator.check_schema(schema)
     except jsonschema.exceptions.SchemaError as err:
-        raise AugurException("Subsampling schema definition is not valid. Error: {}".format(path, err))
+        raise Exception("Subsampling schema definition is not valid. Error: {}".format(path, err))
 
     try:
         jsonschema.Draft6Validator(schema).validate(scheme)
     except jsonschema.exceptions.ValidationError as err:
         print(err)
-        raise AugurException("Subsampling scheme failed validation")
+        raise Exception("Subsampling scheme failed validation")
 
 class Sample():
     """
@@ -140,7 +139,7 @@ class Sample():
             return
         focal_sample = self.priorities.get('sample', None)
         if not focal_sample:
-            raise AugurException(f"Cannot calculate priorities needed for {self.name} as the {self.get_priority_focus_name()} sample wasn't linked")
+            raise Exception(f"Cannot calculate priorities needed for {self.name} as the {self.get_priority_focus_name()} sample wasn't linked")
         print(f"Calculating priorities of {focal_sample.name}, as required by {self.name}")
         priorities_file = focal_sample.calculate_priorities()
         print(f"\tSetting {self.name} filter priority file to {priorities_file}")
@@ -185,7 +184,7 @@ class Sample():
 
     def set_priority_sample(self, sample):
         if not self.priorities:
-            raise AugurException(f"No priorities set for {self.name}")
+            raise Exception(f"No priorities set for {self.name}")
         self.priorities['sample'] = sample
 
     def filter(self):
@@ -258,7 +257,7 @@ def make_graph(samples):
     # print("\ngraph"); pprint(graph);print("\n")
 
     if len(samples)!=len(included):
-        AugurException("Incomplete graph construction")
+        Exception("Incomplete graph construction")
 
     return graph
 
