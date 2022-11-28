@@ -1,0 +1,3 @@
+closest:
+  group-by: ["region"]
+  subsample-max-sequences: 3

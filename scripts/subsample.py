@@ -37,6 +37,7 @@ def run(args):
 
     graph = make_graph(samples)
 
+    # TODO - we can parallelise the graph traversal with N workers.
     traverse_graph(
         graph,
         lambda s: s.filter()
