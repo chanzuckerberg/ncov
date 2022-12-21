@@ -18,6 +18,8 @@ patternProperties:
       exclude-ambiguous-dates-by:
         type: string
         enum: ["any", "day", "month", "year"]
+      min-length:
+        type: integer
       min-date:
         type: ["number", "string"]
         pattern: ^\d{4}-\d{2}-\d{2}$
